@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Center Infrastructure & Engineering Portal</title>
+  
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --bg-dark: #070a13;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.12), transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.08), transparent 40%);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', 'Sarabun', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* Tab Controls */
+    .tab-btn {
+      transition: all 0.3s ease;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active {
+      color: #38bdf8;
+      border-bottom-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    /* Infographic Map Area */
+    .map-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 7;
+      min-height: 420px;
+      background: url('DC Layout.png') center/cover no-repeat;
+      background-color: #0f172a;
+      border-radius: 14px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 1.25rem;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Hotspots */
+    .hotspot {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background: var(--accent-blue);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.9);
+      border: 2px solid #fff;
+      transition: all 0.2s ease;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+    .hotspot::after {
+      content: '';
+      position: absolute;
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      border: 2px solid var(--accent-cyan);
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+    .hotspot:hover, .hotspot.active {
+      background: var(--accent-cyan);
+      transform: translate(-50%, -50%) scale(1.25);
+      box-shadow: 0 0 25px rgba(6, 182, 212, 1);
+    }
+
+    .hs-1 { top: 40%; left: 15.5%; } 
+    .hs-2 { top: 58%; left: 37.5%; } 
+    .hs-3 { top: 44%; left: 54.5%; } 
+    .hs-4 { top: 22%; left: 74%; }   
+    .hs-5 { top: 72%; left: 27.5%; } 
+    .hs-6 { top: 73%; left: 47%; }   
+    .hs-7 { top: 69%; left: 60.5%; } 
+    .hs-8 { top: 76%; left: 79%; }   
+
+    /* TIA-942 Topology Diagram Nodes */
+    .node {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.3s ease;
+      min-width: 90px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    .node.inactive { opacity: 0.2; border-color: transparent; box-shadow: none; }
+    .node-diamond {
+      width: 55px; height: 55px;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      transform: rotate(45deg);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease; margin: 10px auto;
+    }
+    .node-diamond span { transform: rotate(-45deg); font-size: 0.75rem; font-weight: 700; }
+    .node-diamond.inactive { opacity: 0.2; border-color: transparent; }
+
+    .connection-path { stroke: rgba(255, 255, 255, 0.2); stroke-width: 2; fill: none; transition: all 0.3s ease; }
+    .connection-path.active { stroke: var(--accent-blue); stroke-dasharray: 6; animation: dash 30s linear infinite; }
+    @keyframes dash { to { stroke-dashoffset: -1000; } }
+
+    /* Custom Form Controls for Dark Theme */
+    .dark-input {
+      background-color: #0f172a !important;
+      border-color: #334155 !important;
+      color: #f8fafc !important;
+    }
+    .dark-input:focus {
+      border-color: #38bdf8 !important;
+      outline: none;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8">
+
+  <!-- Main Container -->
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Navbar & Header -->
+    <header class="bg-gray-900/80 backdrop-blur-md border border-gray-800 rounded-2xl p-6 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="p-2 bg-blue-600/20 text-blue-400 rounded-lg text-xl"><i class="fa-solid fa-server"></i></span>
+          <h1 class="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
+            Datacenter Infrastructure Portal
+          </h1>
+        </div>
+        <p class="text-xs md:text-sm text-gray-400 mt-1">
+          ระบบบริหารจัดการ ออกแบบ และประเมินทำเลที่ตั้งศูนย์ข้อมูลระดับสากล (ANSI/TIA-942-C & BICSI 002)
+        </p>
+      </div>
+
+      <!-- Quick Metrics -->
+      <div class="flex items-center gap-4 border-l border-gray-800 pl-6 hidden lg:flex">
+        <div class="text-center">
+          <p class="text-xs text-gray-400 uppercase tracking-wider">Target Availability</p>
+          <p class="text-lg font-bold text-emerald-400">99.995% (Tier IV)</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-gray-400 uppercase tracking-wider">Total Power Capacity</p>
+          <p class="text-lg font-bold text-cyan-400">8.0 MW</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex flex-wrap gap-2 border-b border-gray-800 pb-2">
+      <button onclick="switchTab('tab-infographic')" id="btn-tab-infographic" class="tab-btn active px-4 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2">
+        <i class="fa-solid fa-cubes"></i> Modern DC Architecture (Infographic)
+      </button>
+      <button onclick="switchTab('tab-tia942')" id="btn-tab-tia942" class="tab-btn px-4 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 text-gray-400 hover:text-white">
+        <i class="fa-solid fa-diagram-project"></i> TIA-942 Architecture Explorer
+      </button>
+      <button onclick="switchTab('tab-site1')" id="btn-tab-site1" class="tab-btn px-4 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 text-gray-400 hover:text-white">
+        <i class="fa-solid fa-clipboard-check"></i> Single Site Selection (Part 1)
+      </button>
+      <button onclick="switchTab('tab-site2')" id="btn-tab-site2" class="tab-btn px-4 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 text-gray-400 hover:text-white">
+        <i class="fa-solid fa-code-compare"></i> Multi-Site Scoring Matrix (Part 2)
+      </button>
+    </nav>
+
+    <!-- TAB 1: MODEM DC INFOGRAPHIC -->
+    <section id="tab-infographic" class="space-y-6">
+      <!-- Top Stats Bar -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl flex items-center gap-3">
+          <div class="p-3 bg-blue-500/10 text-blue-400 rounded-lg text-xl">⚡</div>
+          <div>
+            <h4 class="font-bold text-sm">24/7 Always On</h4>
+            <p class="text-xs text-gray-400">Zero downtime. Zero excuses.</p>
+          </div>
+        </div>
+        <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl flex items-center gap-3">
+          <div class="p-3 bg-cyan-500/10 text-cyan-400 rounded-lg text-xl">🔌</div>
+          <div>
+            <h4 class="font-bold text-sm">MW Scale</h4>
+            <p class="text-xs text-gray-400">Tens to hundreds of megawatts.</p>
+          </div>
+        </div>
+        <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl flex items-center gap-3">
+          <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg text-xl">🛡️</div>
+          <div>
+            <h4 class="font-bold text-sm">100% Reliability</h4>
+            <p class="text-xs text-gray-400">Redundancy & Resilience.</p>
+          </div>
+        </div>
+        <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl flex items-center gap-3">
+          <div class="p-3 bg-purple-500/10 text-purple-400 rounded-lg text-xl">📈</div>
+          <div>
+            <h4 class="font-bold text-sm">Growing Demand</h4>
+            <p class="text-xs text-gray-400">AI & Cloud infrastructure.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Map Canvas -->
+      <div class="map-container">
+        <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 bg-gray-950/80 px-3 py-1.5 rounded-full border border-gray-700 backdrop-blur-sm self-start">
+          Interactive Architectural Map • Hover / Click Pin
+        </span>
+
+        <!-- Hotspots 1-8 -->
+        <div class="hotspot hs-1 active" onclick="inspectModule(1)" onmouseover="inspectModule(1)">1</div>
+        <div class="hotspot hs-2" onclick="inspectModule(2)" onmouseover="inspectModule(2)">2</div>
+        <div class="hotspot hs-3" onclick="inspectModule(3)" onmouseover="inspectModule(3)">3</div>
+        <div class="hotspot hs-4" onclick="inspectModule(4)" onmouseover="inspectModule(4)">4</div>
+        <div class="hotspot hs-5" onclick="inspectModule(5)" onmouseover="inspectModule(5)">5</div>
+        <div class="hotspot hs-6" onclick="inspectModule(6)" onmouseover="inspectModule(6)">6</div>
+        <div class="hotspot hs-7" onclick="inspectModule(7)" onmouseover="inspectModule(7)">7</div>
+        <div class="hotspot hs-8" onclick="inspectModule(8)" onmouseover="inspectModule(8)">8</div>
+      </div>
+
+      <!-- Real-time Inspector Box (Without Image) -->
+      <div class="bg-gray-900/90 border border-blue-500/50 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <div class="space-y-2 text-left w-full">
+          <div class="flex items-center gap-3">
+            <span id="inspBadge" class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-extrabold flex items-center justify-center text-base shadow-lg shadow-blue-500/30">1</span>
+            <h3 id="inspTitle" class="text-xl md:text-2xl font-bold text-white tracking-wide">SUBSTATIONS</h3>
+          </div>
+          <p id="inspDesc" class="text-sm md:text-base text-gray-300 leading-relaxed pt-1">Delivering large-scale utility power into the campus and supporting massive MW demand.</p>
+        </div>
+      </div>
+
+      <!-- Supporting Sub-Systems -->
+      <div class="space-y-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span class="w-1 h-4 bg-cyan-400 rounded-full"></span> The Systems That Power The Mission
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          <div class="bg-gray-900/60 border border-gray-800 p-3 rounded-xl space-y-2">
+            <h4 class="text-xs font-bold text-cyan-400 flex items-center gap-1.5">❄️ Cooling Systems</h4>
+            <div class="text-[11px] text-gray-400 space-y-1">
+              <p>• Chillers & Towers</p>
+              <p>• CRAHs / CRACs</p>
+              <p>• Liquid CDUs</p>
+            </div>
+          </div>
+          <div class="bg-gray-900/60 border border-gray-800 p-3 rounded-xl space-y-2">
+            <h4 class="text-xs font-bold text-cyan-400 flex items-center gap-1.5">⛽ Fuel Systems</h4>
+            <div class="text-[11px] text-gray-400 space-y-1">
+              <p>• Storage Tanks</p>
+              <p>• Fuel Transfer</p>
+              <p>• Leak Detection</p>
+            </div>
+          </div>
+          <div class="bg-gray-900/60 border border-gray-800 p-3 rounded-xl space-y-2">
+            <h4 class="text-xs font-bold text-cyan-400 flex items-center gap-1.5">🔥 Fire Protection</h4>
+            <div class="text-[11px] text-gray-400 space-y-1">
+              <p>• Early Detection</p>
+              <p>• Gas Suppression</p>
+              <p>• VESDA Systems</p>
+            </div>
+          </div>
+          <div class="bg-gray-900/60 border border-gray-800 p-3 rounded-xl space-y-2">
+            <h4 class="text-xs font-bold text-cyan-400 flex items-center gap-1.5">🔒 Security Systems</h4>
+            <div class="text-[11px] text-gray-400 space-y-1">
+              <p>• Access Control</p>
+              <p>• Surveillance</p>
+              <p>• SOC Monitoring</p>
+            </div>
+          </div>
+          <div class="bg-gray-900/60 border border-gray-800 p-3 rounded-xl space-y-2">
+            <h4 class="text-xs font-bold text-cyan-400 flex items-center gap-1.5">🌐 Network Infra</h4>
+            <div class="text-[11px] text-gray-400 space-y-1">
+              <p>• Fiber Entrances</p>
+              <p>• Meet-Me Rooms</p>
+              <p>• Redundant Paths</p>
+            </div>
+          </div>
+          <div class="bg-gray-900/60 border border-gray-800 p-3 rounded-xl space-y-2">
+            <h4 class="text-xs font-bold text-cyan-400 flex items-center gap-1.5">⚙️ EPMS / DCIM</h4>
+            <div class="text-[11px] text-gray-400 space-y-1">
+              <p>• Power Monitoring</p>
+              <p>• Energy Mgmt</p>
+              <p>• Capacity Plan</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: TIA-942 ARCHITECTURE EXPLORER -->
+    <section id="tab-tia942" class="space-y-6 hidden">
+      <!-- Controls Panel -->
+      <div class="bg-gray-900/70 border border-gray-800 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex gap-1 bg-black/40 p-1 rounded-xl">
+          <button class="tier-btn px-4 py-2 rounded-lg font-bold text-xs text-gray-400 hover:text-white" onclick="setTier(1)">Rated 1</button>
+          <button class="tier-btn px-4 py-2 rounded-lg font-bold text-xs text-gray-400 hover:text-white" onclick="setTier(2)">Rated 2</button>
+          <button class="tier-btn px-4 py-2 rounded-lg font-bold text-xs text-gray-400 hover:text-white" onclick="setTier(3)">Rated 3</button>
+          <button class="tier-btn active px-4 py-2 rounded-lg font-bold text-xs bg-blue-600 text-white" onclick="setTier(4)">Rated 4</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-400">กรองระบบ:</span>
+          <select id="layerFilter" onchange="drawTopology()" class="bg-gray-800 border border-gray-700 text-xs rounded-lg px-3 py-2 text-white outline-none">
+            <option value="all">แสดงระบบทั้งหมด (Complete)</option>
+            <option value="power">ระบบไฟฟ้า (Power Only)</option>
+            <option value="cooling">ระบบความเย็น (Cooling Only)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Diagram Canvas -->
+      <div id="canvas-card" class="bg-gray-900/70 border border-gray-800 rounded-2xl p-6 relative min-h-[450px]">
+        <svg id="svg-canvas" class="absolute inset-0 w-full h-full pointer-events-none">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" />
+            </marker>
+          </defs>
+        </svg>
+
+        <!-- Layer 1 -->
+        <div class="border border-white/5 bg-white/[0.01] rounded-xl p-4 mb-6 relative">
+          <span class="absolute top-2 left-4 text-[10px] font-bold tracking-widest text-cyan-400 uppercase">1. Utility & Main Sources</span>
+          <div class="flex justify-around items-center gap-2 mt-4">
+            <div class="node" id="gridA">Utility Grid A</div>
+            <div class="node" id="genA">Genset A</div>
+            <div class="node" id="genB">Genset B</div>
+            <div class="node" id="gridB">Utility Grid B</div>
+            <div class="node" id="chillerA">Chiller A</div>
+            <div class="node" id="chillerB">Chiller B</div>
+          </div>
+        </div>
+
+        <!-- Layer 2 -->
+        <div class="border border-white/5 bg-white/[0.01] rounded-xl p-4 mb-6 relative">
+          <span class="absolute top-2 left-4 text-[10px] font-bold tracking-widest text-cyan-400 uppercase">2. Conditioning & Transfer Switches</span>
+          <div class="flex justify-around items-center mb-3">
+            <div class="w-2/5 flex justify-center"><div class="node-diamond" id="atsA"><span>ATS A</span></div></div>
+            <div class="w-2/5 flex justify-center"><div class="node-diamond" id="atsB"><span>ATS B</span></div></div>
+          </div>
+          <div class="flex justify-around items-center gap-2">
+            <div class="node" id="upsA">UPS Path A</div>
+            <div class="node" id="upsB">UPS Path B</div>
+            <div class="node" id="crahA">CRAH Unit A</div>
+            <div class="node" id="crahB">CRAH Unit B</div>
+          </div>
+        </div>
+
+        <!-- Layer 3 -->
+        <div class="border border-white/5 bg-white/[0.01] rounded-xl p-4 relative">
+          <span class="absolute top-2 left-4 text-[10px] font-bold tracking-widest text-cyan-400 uppercase">3. Server Hall Distribution</span>
+          <div class="flex justify-around items-center gap-2 mb-4">
+            <div class="node" id="pduA">PDU Path A</div>
+            <div class="node" id="pduB">PDU Path B</div>
+          </div>
+          <div class="flex justify-center">
+            <div class="node w-full max-w-md bg-gray-950 border-cyan-500 text-cyan-300 font-bold" id="racks">
+              IT Server Racks (Dual-Corded Infrastructure)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tier Metrics Summary -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl text-center">
+          <p class="text-xs text-gray-400 uppercase">ความพร้อมใช้งาน (Availability)</p>
+          <p id="m-avail" class="text-xl font-bold text-white mt-1">99.995%</p>
+          <p id="m-avail-desc" class="text-xs text-cyan-400 mt-0.5">ทนต่อความผิดพลาดสูงสุด</p>
+        </div>
+        <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl text-center">
+          <p class="text-xs text-gray-400 uppercase">เวลาหยุดทำงานสูงสุด (Downtime)</p>
+          <p id="m-down" class="text-xl font-bold text-white mt-1">26.3 นาที/ปี</p>
+          <p class="text-xs text-cyan-400 mt-0.5">Downtime ต่อปีโดยเฉลี่ย</p>
+        </div>
+        <div class="bg-gray-900/60 border border-gray-800 p-4 rounded-xl text-center">
+          <p class="text-xs text-gray-400 uppercase">ระดับระบบสำรอง (Redundancy)</p>
+          <p id="m-red" class="text-xl font-bold text-white mt-1">2(N+1) Active-Active</p>
+          <p id="m-path" class="text-xs text-cyan-400 mt-0.5">2 เส้นทางเดินสายอิสระ</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: SINGLE SITE ASSESSMENT (PART 1) - DARK THEME -->
+    <section id="tab-site1" class="space-y-6 hidden">
+      <div class="bg-gray-900/80 border border-gray-800 text-gray-100 p-6 rounded-2xl shadow-2xl backdrop-blur-md space-y-6">
+        <div class="border-b border-gray-800 pb-4">
+          <h2 class="text-xl font-bold text-white">เครื่องมือประเมินและคัดเลือกทำเลที่ตั้ง Data Center (Site Assessment Tool)</h2>
+          <p class="text-xs text-gray-400">อ้างอิงเกณฑ์มาตรฐานสากล ANSI/TIA-942-C (2024), BICSI 002-2024 และ Uptime Institute Standards</p>
+        </div>
+
+        <!-- Project Info -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">ชื่อโครงการ / Project Name:</label>
+            <input type="text" value="Enterprise Main Data Center Phase 1" class="w-full p-2.5 rounded-lg dark-input border">
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">ระดับ Tier เป้าหมาย (Target Tier):</label>
+            <select id="targetTier" onchange="calculateScoresPart1()" class="w-full p-2.5 rounded-lg dark-input border">
+              <option value="Tier II">Tier II (Redundant Components)</option>
+              <option value="Tier III" selected>Tier III (Concurrently Maintainable)</option>
+              <option value="Tier IV">Tier IV (Fault Tolerant)</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">ชื่อไซต์ที่ประเมิน (Site Name):</label>
+            <input type="text" value="Site A - Bangna Tech Park" class="w-full p-2.5 rounded-lg dark-input border">
+          </div>
+        </div>
+
+        <!-- Knockout Criteria -->
+        <div class="border border-gray-800 rounded-xl p-4 bg-gray-950/50 space-y-3">
+          <div class="flex justify-between items-center">
+            <h3 class="font-bold text-sm text-cyan-400">ส่วนที่ 1 — เกณฑ์ตัดสินและตัดสิทธิ์ทันที (Knock-out Criteria)</h3>
+            <span id="knockoutSummary" class="px-3 py-1 text-xs rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ผ่านเกณฑ์ขั้นต้นทุกข้อ</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs border-collapse border border-gray-800">
+              <thead>
+                <tr class="bg-gray-800/80 text-gray-300">
+                  <th class="p-2.5 border border-gray-800 w-10">#</th>
+                  <th class="p-2.5 border border-gray-800 text-left">เกณฑ์การพิจารณา (Knock-out Items)</th>
+                  <th class="p-2.5 border border-gray-800 w-28 text-center">ผลการตรวจ</th>
+                  <th class="p-2.5 border border-gray-800 text-left">หมายเหตุ / ข้อเท็จจริง</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800">
+                <tr>
+                  <td class="p-2.5 border border-gray-800 text-center text-gray-400">K1</td>
+                  <td class="p-2.5 border border-gray-800 text-gray-300">อยู่นอกพื้นที่น้ำท่วม 100 ปี หรือมีมาตรการยกระดับพื้นที่ที่พิสูจน์ได้ตามมาตรฐาน</td>
+                  <td class="p-2.5 border border-gray-800 text-center"><select class="ko-select dark-input border p-1 rounded" onchange="calculateScoresPart1()"><option value="PASS">ผ่าน</option><option value="FAIL">ไม่ผ่าน</option></select></td>
+                  <td class="p-2.5 border border-gray-800 text-gray-400">ระดับพื้นที่สูงกว่าระดับน้ำท่วมสูงสุดปี 2554 +1.80 เมตร</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 border border-gray-800 text-center text-gray-400">K2</td>
+                  <td class="p-2.5 border border-gray-800 text-gray-300">ไฟฟ้าจากการไฟฟ้ารองรับ IT Load ในปีที่ 10 ได้ (มีหนังสือยืนยัน Capacity)</td>
+                  <td class="p-2.5 border border-gray-800 text-center"><select class="ko-select dark-input border p-1 rounded" onchange="calculateScoresPart1()"><option value="PASS">ผ่าน</option><option value="FAIL">ไม่ผ่าน</option></select></td>
+                  <td class="p-2.5 border border-gray-800 text-gray-400">การไฟฟ้ามีหนังสือยืนยันสายจ่ายไฟ 8 MW ภายใน Q3</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 border border-gray-800 text-center text-gray-400">K3</td>
+                  <td class="p-2.5 border border-gray-800 text-gray-300">มี Telecom Carrier อย่างน้อย 2 ราย และเป็นเส้นทาง Fiber แยกกายภาพกันจริง</td>
+                  <td class="p-2.5 border border-gray-800 text-center"><select class="ko-select dark-input border p-1 rounded" onchange="calculateScoresPart1()"><option value="PASS">ผ่าน</option><option value="FAIL">ไม่ผ่าน</option></select></td>
+                  <td class="p-2.5 border border-gray-800 text-gray-400">มี Fiber จาก AIS และ TRUE เดินคนละฝั่งถนน</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 border border-gray-800 text-center text-gray-400">K4</td>
+                  <td class="p-2.5 border border-gray-800 text-gray-300">ผังเมืองและใบอนุญาต ยืนยันอนุญาตให้ประกอบกิจการ Data Center และพักเชื้อเพลิงได้</td>
+                  <td class="p-2.5 border border-gray-800 text-center"><select class="ko-select dark-input border p-1 rounded" onchange="calculateScoresPart1()"><option value="PASS">ผ่าน</option><option value="FAIL">ไม่ผ่าน</option></select></td>
+                  <td class="p-2.5 border border-gray-800 text-gray-400">พื้นที่สีพานิชยกรรม/อุตสาหกรรม ไม่ขัดกฎหมายผังเมือง</td>
+                </tr>
+                <tr>
+                  <td class="p-2.5 border border-gray-800 text-center text-gray-400">K5</td>
+                  <td class="p-2.5 border border-gray-800 text-gray-300">ไม่อยู่ในระยะอันตรายจากคลังน้ำมัน โรงงานเคมี หรือแนวแนวซ้อมยิงปืน</td>
+                  <td class="p-2.5 border border-gray-800 text-center"><select class="ko-select dark-input border p-1 rounded" onchange="calculateScoresPart1()"><option value="PASS">ผ่าน</option><option value="FAIL">ไม่ผ่าน</option></select></td>
+                  <td class="p-2.5 border border-gray-800 text-gray-400">ห่างจากโรงงานเคมีที่ใกล้ที่สุด 8.5 กิโลเมตร</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Weighted Scoring Matrix Table -->
+        <div class="border border-gray-800 rounded-xl p-4 bg-gray-950/50 space-y-3">
+          <h3 class="font-bold text-sm text-cyan-400">ส่วนที่ 2 & 3 — ตารางให้คะแนนถ่วงน้ำหนัก (Weighted Scoring Matrix)</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs border-collapse border border-gray-800">
+              <thead>
+                <tr class="bg-gray-800/80 text-gray-300">
+                  <th class="p-2.5 border border-gray-800 text-left">หมวดปัจจัย (Categories)</th>
+                  <th class="p-2.5 border border-gray-800 w-24 text-center">น้ำหนัก (%)</th>
+                  <th class="p-2.5 border border-gray-800 w-24 text-center">คะแนนดิบ (1-5)</th>
+                  <th class="p-2.5 border border-gray-800 w-24 text-center">คะแนนถ่วง</th>
+                  <th class="p-2.5 border border-gray-800 text-left">เกณฑ์อ้างอิงการให้คะแนน</th>
+                </tr>
+              </thead>
+              <tbody id="scoringBodyPart1" class="divide-y divide-gray-800"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Result Box -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div id="resultCardPart1" class="bg-blue-600/30 border border-blue-500/50 text-white rounded-xl p-6 text-center shadow-lg flex flex-col justify-center backdrop-blur-md">
+            <h4 class="text-xs uppercase tracking-wider font-semibold text-gray-300">ผลการประเมินสรุป</h4>
+            <div id="totalScoreDisplayPart1" class="text-3xl font-extrabold my-2 text-cyan-300">0.00 / 5.00</div>
+            <div id="statusDisplayPart1" class="text-xs font-bold bg-blue-500/20 text-cyan-300 border border-cyan-500/40 py-1 px-3 rounded-full inline-block">Calculating...</div>
+          </div>
+          <div class="md:col-span-2 border border-gray-800 rounded-xl p-4 bg-gray-950/50 flex flex-col justify-between">
+            <div>
+              <h4 class="font-bold text-sm text-cyan-400 mb-1">คำแนะนำเชิงวิศวกรรม (Engineering Recommendation)</h4>
+              <p id="recommendationTextPart1" class="text-xs text-gray-300 leading-relaxed">-</p>
+            </div>
+            <button onclick="window.print()" class="self-start mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-600/30">
+              🖨️ พิมพ์ / บันทึกรายงานเป็น PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: MULTI-SITE COMPARISON MATRIX (PART 2) - DARK THEME -->
+    <section id="tab-site2" class="space-y-6 hidden">
+      <div class="bg-gray-900/80 border border-gray-800 text-gray-100 p-6 rounded-2xl shadow-2xl backdrop-blur-md space-y-6">
+        <div class="border-b border-gray-800 pb-4 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <span class="bg-blue-600/30 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">ส่วนที่ 2</span>
+            <h2 class="text-xl font-bold text-white mt-1">Interactive Site Selection Checklist & Scoring Matrix</h2>
+            <p class="text-xs text-gray-400">เครื่องมือประเมินและเปรียบเทียบศักยภาพพื้นที่ตั้งโครงการ คำนวณคะแนนแบบถ่วงน้ำหนักอัตโนมัติ</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="resetScoresPart2()" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700 transition">
+              <i class="fa-solid fa-rotate-left mr-1"></i> รีเซ็ต
+            </button>
+            <button onclick="exportToCSVPart2()" class="px-4 py-1.5 text-xs bg-emerald-600/80 hover:bg-emerald-600 border border-emerald-500/50 text-white font-medium rounded-lg transition shadow-lg shadow-emerald-600/20">
+              <i class="fa-solid fa-file-excel mr-1"></i> Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Weight Info -->
+        <div class="flex items-center gap-2 text-xs bg-gray-950/50 p-3 rounded-xl border border-gray-800">
+          <span class="font-bold text-gray-300">น้ำหนักรวมปัจจุบัน:</span>
+          <span id="totalWeightDisplayPart2" class="font-extrabold px-2.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">100%</span>
+        </div>
+
+        <!-- Matrix Table -->
+        <div class="overflow-x-auto border border-gray-800 rounded-xl">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-800/90 text-gray-200 uppercase">
+                <th class="p-3 w-1/3 border-b border-gray-800">หมวดหมู่และเกณฑ์การประเมิน</th>
+                <th class="p-3 w-24 text-center border-b border-gray-800">น้ำหนัก (%)</th>
+                <th class="p-3 text-center bg-gray-800 border-l border-b border-gray-700">Site A: ทำเล A</th>
+                <th class="p-3 text-center bg-gray-800 border-l border-b border-gray-700">Site B: ทำเล B</th>
+                <th class="p-3 text-center bg-gray-800 border-l border-b border-gray-700">Site C: ทำเล C</th>
+              </tr>
+            </thead>
+            <tbody id="matrixBodyPart2" class="divide-y divide-gray-800"></tbody>
+            <tfoot>
+              <tr class="bg-gray-950/60 font-semibold border-t border-gray-800">
+                <td class="p-3 text-gray-300">คะแนนดิบรวม (Raw Score)</td>
+                <td class="p-3 text-center text-gray-500">100%</td>
+                <td class="p-3 text-center border-l border-gray-800 text-gray-300" id="rawSiteAPart2">0/50</td>
+                <td class="p-3 text-center border-l border-gray-800 text-gray-300" id="rawSiteBPart2">0/50</td>
+                <td class="p-3 text-center border-l border-gray-800 text-gray-300" id="rawSiteCPart2">0/50</td>
+              </tr>
+              <tr class="bg-gray-950 text-white font-bold border-t border-gray-800">
+                <td class="p-3">คะแนนถ่วงน้ำหนักรวม (Weighted Score)</td>
+                <td class="p-3 text-center text-blue-400">100%</td>
+                <td class="p-3 text-center text-emerald-400 text-sm border-l border-gray-800" id="scoreSiteAPart2">0.00</td>
+                <td class="p-3 text-center text-emerald-400 text-sm border-l border-gray-800" id="scoreSiteBPart2">0.00</td>
+                <td class="p-3 text-center text-emerald-400 text-sm border-l border-gray-800" id="scoreSiteCPart2">0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Result Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div id="cardSiteAPart2" class="bg-gray-950/60 p-4 rounded-xl border border-gray-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <h4 class="font-bold text-sm text-gray-200">Site A: ทำเล A</h4>
+              <span id="badgeSiteAPart2" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-800 text-gray-400 border border-gray-700">อันดับ -</span>
+            </div>
+            <div class="text-2xl font-extrabold text-white" id="cardScoreAPart2">0.00 <span class="text-xs font-normal text-gray-500">/ 5.00</span></div>
+            <p id="descSiteAPart2" class="text-xs text-gray-400">รอกรอกข้อมูลคะแนน</p>
+          </div>
+          <div id="cardSiteBPart2" class="bg-gray-950/60 p-4 rounded-xl border border-gray-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <h4 class="font-bold text-sm text-gray-200">Site B: ทำเล B</h4>
+              <span id="badgeSiteBPart2" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-800 text-gray-400 border border-gray-700">อันดับ -</span>
+            </div>
+            <div class="text-2xl font-extrabold text-white" id="cardScoreBPart2">0.00 <span class="text-xs font-normal text-gray-500">/ 5.00</span></div>
+            <p id="descSiteBPart2" class="text-xs text-gray-400">รอกรอกข้อมูลคะแนน</p>
+          </div>
+          <div id="cardSiteCPart2" class="bg-gray-950/60 p-4 rounded-xl border border-gray-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <h4 class="font-bold text-sm text-gray-200">Site C: ทำเล C</h4>
+              <span id="badgeSiteCPart2" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-800 text-gray-400 border border-gray-700">อันดับ -</span>
+            </div>
+            <div class="text-2xl font-extrabold text-white" id="cardScoreCPart2">0.00 <span class="text-xs font-normal text-gray-500">/ 5.00</span></div>
+            <p id="descSiteCPart2" class="text-xs text-gray-400">รอกรอกข้อมูลคะแนน</p>
+          </div>
+        </div>
+
+        <!-- Recommendation Banner -->
+        <div class="bg-gradient-to-r from-blue-900/40 via-gray-900 to-cyan-900/40 text-white p-5 rounded-xl border border-blue-500/30 space-y-2 backdrop-blur-md">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-trophy text-amber-400 text-lg"></i>
+            <h4 class="font-bold text-sm text-cyan-300">สรุปผลการวิเคราะห์ทำเลที่เหมาะสมที่สุด (Final Recommendation)</h4>
+          </div>
+          <p id="bestSiteTextPart2" class="text-xs text-gray-300 leading-relaxed">
+            กรุณากรอกคะแนนในตารางด้านบนเพื่อประเมินผล
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    // Tab Navigation Logic
+    function switchTab(tabId) {
+      const tabs = ['tab-infographic', 'tab-tia942', 'tab-site1', 'tab-site2'];
+      tabs.forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+        document.getElementById(`btn-${id}`).classList.remove('active');
+        document.getElementById(`btn-${id}`).classList.add('text-gray-400');
+      });
+
+      document.getElementById(tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById(`btn-${tabId}`);
+      activeBtn.classList.add('active');
+      activeBtn.classList.remove('text-gray-400');
+
+      if (tabId === 'tab-tia942') {
+        setTimeout(drawTopology, 50);
+      }
+    }
+
+    /* -------------------------------------------------------------
+       TAB 1 LOGIC: INFOGRAPHIC MODULE (NO IMAGE VERSION)
+    ------------------------------------------------------------- */
+    const modulesData = [
+      { 
+        id: 1, 
+        name: "SUBSTATIONS", 
+        desc: "Delivering large-scale utility power into the campus and supporting massive MW demand."
+      },
+      { 
+        id: 2, 
+        name: "SWITCHGEAR", 
+        desc: "Critical for power distribution, protection, redundancy, and system reliability throughout the facility."
+      },
+      { 
+        id: 3, 
+        name: "UPS SYSTEMS", 
+        desc: "Providing uninterrupted backup power to maintain uptime during outages or power fluctuations."
+      },
+      { 
+        id: 4, 
+        name: "GENERATORS", 
+        desc: "Supporting emergency and standby power requirements across mission critical operations."
+      },
+      { 
+        id: 5, 
+        name: "BUSWAY & CONTAINMENT", 
+        desc: "Allowing efficient power distribution and scalable infrastructure throughout the facility."
+      },
+      { 
+        id: 6, 
+        name: "BMS / CONTROLS", 
+        desc: "Monitoring, automation, and operational control systems that keep the facility running efficiently."
+      },
+      { 
+        id: 7, 
+        name: "COMMISSIONING", 
+        desc: "One of the most critical phases of the entire project, testing and validating every system before going live."
+      },
+      { 
+        id: 8, 
+        name: "MISSION CRITICAL INFRASTRUCTURE", 
+        desc: "All systems working together to deliver 24/7 reliability, security, and performance at scale."
+      }
+    ];
+
+    function inspectModule(id) {
+      const item = modulesData.find(m => m.id === id);
+      if (!item) return;
+      document.querySelectorAll('.hotspot').forEach(el => el.classList.remove('active'));
+      document.querySelector(`.hs-${id}`).classList.add('active');
+      document.getElementById('inspBadge').innerText = item.id;
+      document.getElementById('inspTitle').innerText = item.name;
+      document.getElementById('inspDesc').innerText = item.desc;
+    }
+
+    /* -------------------------------------------------------------
+       TAB 2 LOGIC: TIA-942 ARCHITECTURE EXPLORER
+    ------------------------------------------------------------- */
+    const tierConfigs = {
+      1: { avail: "99.671%", downtime: "28.8 ชั่วโมง/ปี", redundancy: "N (ไม่มีสำรอง)", path: "1 เส้นทาง (Single Path)", activeNodes: ['gridA', 'genA', 'atsA', 'upsA', 'pduA', 'chillerA', 'crahA', 'racks'], lines: [['gridA', 'atsA'], ['genA', 'atsA'], ['atsA', 'upsA'], ['upsA', 'pduA'], ['pduA', 'racks'], ['chillerA', 'crahA'], ['crahA', 'racks']] },
+      2: { avail: "99.741%", downtime: "22.0 ชั่วโมง/ปี", redundancy: "N+1 (อุปกรณ์สำรอง)", path: "1 เส้นทางหลัก", activeNodes: ['gridA', 'genA', 'genB', 'atsA', 'upsA', 'pduA', 'chillerA', 'chillerB', 'crahA', 'racks'], lines: [['gridA', 'atsA'], ['genA', 'atsA'], ['genB', 'atsA'], ['atsA', 'upsA'], ['upsA', 'pduA'], ['pduA', 'racks'], ['chillerA', 'crahA'], ['chillerB', 'crahA'], ['crahA', 'racks']] },
+      3: { avail: "99.982%", downtime: "1.6 ชั่วโมง/ปี", redundancy: "N+1 (ซ่อมบำรุงไม่หยุดระบบ)", path: "2 เส้นทาง (1 Active, 1 Passive)", activeNodes: ['gridA', 'genA', 'genB', 'gridB', 'atsA', 'atsB', 'upsA', 'upsB', 'pduA', 'pduB', 'chillerA', 'chillerB', 'crahA', 'crahB', 'racks'], lines: [['gridA', 'atsA'], ['genA', 'atsA'], ['genB', 'atsB'], ['gridB', 'atsB'], ['atsA', 'upsA'], ['atsB', 'upsB'], ['upsA', 'pduA'], ['upsB', 'pduB'], ['pduA', 'racks'], ['pduB', 'racks'], ['chillerA', 'crahA'], ['chillerB', 'crahB'], ['crahA', 'racks'], ['crahB', 'racks']] },
+      4: { avail: "99.995%", downtime: "26.3 นาที/ปี", redundancy: "2(N+1) Active-Active", path: "2 เส้นทางแยกเด็ดขาด", activeNodes: ['gridA', 'genA', 'genB', 'gridB', 'atsA', 'atsB', 'upsA', 'upsB', 'pduA', 'pduB', 'chillerA', 'chillerB', 'crahA', 'crahB', 'racks'], lines: [['gridA', 'atsA'], ['genA', 'atsA'], ['genB', 'atsB'], ['gridB', 'atsB'], ['atsA', 'upsA'], ['atsB', 'upsB'], ['upsA', 'pduA'], ['upsB', 'pduB'], ['pduA', 'racks'], ['pduB', 'racks'], ['chillerA', 'crahA'], ['chillerB', 'crahB'], ['crahA', 'racks'], ['crahB', 'racks']] }
+    };
+    let currentTier = 4;
+
+    function setTier(tierNum) {
+      currentTier = tierNum;
+      document.querySelectorAll('.tier-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', (idx + 1) === tierNum);
+        if((idx + 1) === tierNum) {
+          btn.classList.add('bg-blue-600', 'text-white');
+        } else {
+          btn.classList.remove('bg-blue-600', 'text-white');
+        }
+      });
+      const config = tierConfigs[tierNum];
+      document.getElementById('m-avail').innerText = config.avail;
+      document.getElementById('m-down').innerText = config.downtime;
+      document.getElementById('m-red').innerText = config.redundancy;
+      document.getElementById('m-path').innerText = config.path;
+      drawTopology();
+    }
+
+    function drawTopology() {
+      const config = tierConfigs[currentTier];
+      const filter = document.getElementById('layerFilter').value;
+      const allNodeIds = ['gridA', 'genA', 'genB', 'gridB', 'chillerA', 'chillerB', 'atsA', 'atsB', 'upsA', 'upsB', 'crahA', 'crahB', 'pduA', 'pduB', 'racks'];
+      
+      allNodeIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        let isTypeMatch = true;
+        if (filter === 'power') isTypeMatch = !id.includes('chiller') && !id.includes('crah');
+        if (filter === 'cooling') isTypeMatch = id.includes('chiller') || id.includes('crah') || id === 'racks';
+        const isActive = config.activeNodes.includes(id) && isTypeMatch;
+        el.classList.toggle('inactive', !isActive);
+      });
+
+      const svg = document.getElementById('svg-canvas');
+      const containerRect = document.getElementById('canvas-card').getBoundingClientRect();
+      const defs = svg.querySelector('defs');
+      svg.innerHTML = '';
+      svg.appendChild(defs);
+
+      config.lines.forEach(([startId, endId]) => {
+        if (filter === 'power' && (startId.includes('chiller') || startId.includes('crah') || endId.includes('crah'))) return;
+        if (filter === 'cooling' && (!startId.includes('chiller') && !startId.includes('crah') && endId !== 'racks')) return;
+        const startEl = document.getElementById(startId);
+        const endEl = document.getElementById(endId);
+        if (!startEl || !endEl) return;
+
+        const sRect = startEl.getBoundingClientRect();
+        const eRect = endEl.getBoundingClientRect();
+        const startX = sRect.left + sRect.width / 2 - containerRect.left;
+        const startY = sRect.bottom - containerRect.top;
+        const endX = eRect.left + eRect.width / 2 - containerRect.left;
+        const endY = eRect.top - containerRect.top;
+
+        const controlY = startY + (endY - startY) / 2;
+        const d = `M ${startX} ${startY} C ${startX} ${controlY}, ${endX} ${controlY}, ${endX} ${endY}`;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('class', 'connection-path active');
+        path.setAttribute('marker-end', 'url(#arrow)');
+        svg.appendChild(path);
+      });
+    }
+
+    /* -------------------------------------------------------------
+       TAB 3 LOGIC: PART 1 SINGLE SITE ASSESSMENT
+    ------------------------------------------------------------- */
+    const categoryDataPart1 = [
+      { id: 'A', name: 'Power Availability & Capacity', weight: { 'Tier II': 22, 'Tier III': 25, 'Tier IV': 27 }, defaultScore: 4, desc: 'คะแนน 5: 2 Substation คนละสายส่ง, 1: Capacity ไม่พอ' },
+      { id: 'B', name: 'Natural Hazard Risk', weight: { 'Tier II': 15, 'Tier III': 20, 'Tier IV': 23 }, defaultScore: 5, desc: 'คะแนน 5: นอกเขตน้ำท่วม 500 ปี, 1: พื้นที่เสี่ยงสูง' },
+      { id: 'C', name: 'Man-made Hazard & Security', weight: { 'Tier II': 8, 'Tier III': 10, 'Tier IV': 12 }, defaultScore: 4, desc: 'คะแนน 5: ห่างสนามบิน/ทางรถไฟ, 1: ติดแหล่งอันตราย' },
+      { id: 'D', name: 'Network Connectivity', weight: { 'Tier II': 14, 'Tier III': 15, 'Tier IV': 13 }, defaultScore: 4, desc: 'คะแนน 5: Carrier ≥3 ราย, 1: มี Carrier เดียว' },
+      { id: 'E', name: 'Land & Building Suitability', weight: { 'Tier II': 12, 'Tier III': 10, 'Tier IV': 8 }, defaultScore: 5, desc: 'คะแนน 5: อาคารเดี่ยว ขยายได้ ≥100%' }
+    ];
+
+    function initPart1Table() {
+      const tbody = document.getElementById('scoringBodyPart1');
+      tbody.innerHTML = '';
+      categoryDataPart1.forEach((cat, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="p-2.5 border border-gray-800"><strong class="text-gray-200">${cat.id}. ${cat.name}</strong></td>
+          <td class="p-2.5 border border-gray-800 text-center text-cyan-400 font-medium" id="weightP1_${index}">-</td>
+          <td class="p-2.5 border border-gray-800 text-center"><input type="number" min="1" max="5" class="w-12 text-center dark-input border rounded p-1" id="scoreP1_${index}" value="${cat.defaultScore}" onchange="calculateScoresPart1()"></td>
+          <td class="p-2.5 border border-gray-800 text-center font-bold text-emerald-400" id="weightedScoreP1_${index}">-</td>
+          <td class="p-2.5 border border-gray-800 text-gray-400">${cat.desc}</td>
+        `;
+        tbody.appendChild(row);
+      });
+      calculateScoresPart1();
+    }
+
+    function calculateScoresPart1() {
+      const selectedTier = document.getElementById('targetTier').value;
+      let totalWeightedScore = 0;
+      let passKnockout = true;
+
+      document.querySelectorAll('.ko-select').forEach(select => {
+        if (select.value === 'FAIL') passKnockout = false;
+      });
+
+      const koSummary = document.getElementById('knockoutSummary');
+      if (passKnockout) {
+        koSummary.className = "px-3 py-1 text-xs rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        koSummary.innerText = "ผ่านเกณฑ์ขั้นต้นทุกข้อ";
+      } else {
+        koSummary.className = "px-3 py-1 text-xs rounded-full font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        koSummary.innerText = "ไม่ผ่านเกณฑ์ Knock-out (ตัดสิทธิ์)";
+      }
+
+      categoryDataPart1.forEach((cat, index) => {
+        const weight = cat.weight[selectedTier];
+        const score = parseFloat(document.getElementById(`scoreP1_${index}`).value) || 0;
+        const weightedScore = (weight * score) / 100;
+        document.getElementById(`weightP1_${index}`).innerText = `${weight}%`;
+        document.getElementById(`weightedScoreP1_${index}`).innerText = (weightedScore * 100).toFixed(1);
+        totalWeightedScore += weightedScore;
+      });
+
+      const finalScore = totalWeightedScore.toFixed(2);
+      document.getElementById('totalScoreDisplayPart1').innerText = `${finalScore} / 5.00`;
+      const statusDisplay = document.getElementById('statusDisplayPart1');
+      const recommendationText = document.getElementById('recommendationTextPart1');
+      const resultCard = document.getElementById('resultCardPart1');
+
+      if (!passKnockout) {
+        statusDisplay.innerText = "REJECTED (ตกเกณฑ์บังคับ)";
+        statusDisplay.className = "text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 py-1 px-3 rounded-full inline-block";
+        resultCard.className = "bg-rose-950/40 border border-rose-500/40 text-white rounded-xl p-6 text-center shadow-lg flex flex-col justify-center backdrop-blur-md";
+        recommendationText.innerHTML = `<b class="text-rose-400">ผลสรุป: ไม่อนุญาตให้เลือกทำเลนี้</b><br>ทำเลนี้ไม่ผ่านเกณฑ์ Knock-out Criteria บางประการ`;
+        return;
+      }
+
+      if (finalScore >= 4.0) {
+        statusDisplay.innerText = "EXCELLENT (เหมาะสมอย่างยิ่ง)";
+        statusDisplay.className = "text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 py-1 px-3 rounded-full inline-block";
+        resultCard.className = "bg-emerald-950/40 border border-emerald-500/40 text-white rounded-xl p-6 text-center shadow-lg flex flex-col justify-center backdrop-blur-md";
+        recommendationText.innerHTML = `<b class="text-emerald-400">ผลสรุป: ผ่านการประเมินในระดับดีเยี่ยม</b><br>ไซต์นี้มีความพร้อมสูงมากในทุกมิติ เหมาะสมสำหรับการอนุมัติโครงการ`;
+      } else {
+        statusDisplay.innerText = "ACCEPTABLE (พอใช้ - มีเงื่อนไข)";
+        statusDisplay.className = "text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 py-1 px-3 rounded-full inline-block";
+        resultCard.className = "bg-amber-950/40 border border-amber-500/40 text-white rounded-xl p-6 text-center shadow-lg flex flex-col justify-center backdrop-blur-md";
+        recommendationText.innerHTML = `<b class="text-amber-400">ผลสรุป: ผ่านเกณฑ์ขั้นต่ำแบบมีเงื่อนไข</b><br>ต้องจัดทำแผนลดความเสี่ยง (Mitigation Plan) ก่อนอนุมัติ`;
+      }
+    }
+
+    /* -------------------------------------------------------------
+       TAB 4 LOGIC: PART 2 MULTI-SITE SCORING MATRIX
+    ------------------------------------------------------------- */
+    const criteriaDataPart2 = [
+      { category: "1. ด้านกลุ่มเป้าหมายและการเข้าถึง", items: [
+        { id: "c1", name: "ความหนาแน่นของกลุ่มเป้าหมาย", weight: 20, defaultScores: { a: 4, b: 3, c: 5 } },
+        { id: "c2", name: "ความสะดวกในการเดินทาง", weight: 15, defaultScores: { a: 5, b: 3, c: 2 } }
+      ]},
+      { category: "2. ด้านต้นทุนและค่าใช้จ่าย", items: [
+        { id: "c3", name: "ค่าเช่า/ราคาซื้อขายพื้นที่", weight: 35, defaultScores: { a: 2, b: 4, c: 5 } },
+        { id: "c4", name: "ค่าปรับปรุงพื้นที่/ก่อสร้าง", weight: 30, defaultScores: { a: 3, b: 3, c: 4 } }
+      ]}
+    ];
+
+    function renderMatrixPart2() {
+      const tbody = document.getElementById("matrixBodyPart2");
+      tbody.innerHTML = "";
+      criteriaDataPart2.forEach(cat => {
+        const catRow = document.createElement("tr");
+        catRow.className = "bg-gray-800/40 font-bold text-cyan-400 border-t border-b border-gray-800";
+        catRow.innerHTML = `<td colspan="5" class="p-2.5 text-[11px] uppercase tracking-wider">${cat.category}</td>`;
+        tbody.appendChild(catRow);
+
+        cat.items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="p-2.5 font-medium text-gray-300">${item.name}</td>
+            <td class="p-2.5 text-center">
+              <input type="number" id="weightP2_${item.id}" value="${item.weight}" min="0" max="100" onchange="calculateMatrixPart2()" class="w-14 text-center dark-input border rounded p-1">
+            </td>
+            <td class="p-2.5 text-center border-l border-gray-800">${createSelectP2(`siteAP2_${item.id}`, item.defaultScores.a)}</td>
+            <td class="p-2.5 text-center border-l border-gray-800">${createSelectP2(`siteBP2_${item.id}`, item.defaultScores.b)}</td>
+            <td class="p-2.5 text-center border-l border-gray-800">${createSelectP2(`siteCP2_${item.id}`, item.defaultScores.c)}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      });
+      calculateMatrixPart2();
+    }
+
+    function createSelectP2(id, val) {
+      return `<select id="${id}" onchange="calculateMatrixPart2()" class="w-20 border rounded p-1 text-center dark-input">
+        <option value="1" ${val===1?'selected':''}>1</option>
+        <option value="2" ${val===2?'selected':''}>2</option>
+        <option value="3" ${val===3?'selected':''}>3</option>
+        <option value="4" ${val===4?'selected':''}>4</option>
+        <option value="5" ${val===5?'selected':''}>5</option>
+      </select>`;
+    }
+
+    function calculateMatrixPart2() {
+      let totalWeight = 0, weightedA = 0, weightedB = 0, weightedC = 0, itemCount = 0;
+      criteriaDataPart2.forEach(cat => {
+        cat.items.forEach(item => {
+          itemCount++;
+          const w = parseFloat(document.getElementById(`weightP2_${item.id}`).value) || 0;
+          const a = parseFloat(document.getElementById(`siteAP2_${item.id}`).value) || 0;
+          const b = parseFloat(document.getElementById(`siteBP2_${item.id}`).value) || 0;
+          const c = parseFloat(document.getElementById(`siteCP2_${item.id}`).value) || 0;
+          totalWeight += w;
+          weightedA += (a * w); weightedB += (b * w); weightedC += (c * w);
+        });
+      });
+
+      const finalA = totalWeight > 0 ? (weightedA / totalWeight) : 0;
+      const finalB = totalWeight > 0 ? (weightedB / totalWeight) : 0;
+      const finalC = totalWeight > 0 ? (weightedC / totalWeight) : 0;
+
+      document.getElementById("totalWeightDisplayPart2").innerText = `${totalWeight}%`;
+      document.getElementById("scoreSiteAPart2").innerText = finalA.toFixed(2);
+      document.getElementById("scoreSiteBPart2").innerText = finalB.toFixed(2);
+      document.getElementById("scoreSiteCPart2").innerText = finalC.toFixed(2);
+
+      document.getElementById("cardScoreAPart2").innerHTML = `${finalA.toFixed(2)} <span class="text-xs font-normal text-gray-500">/ 5.00</span>`;
+      document.getElementById("cardScoreBPart2").innerHTML = `${finalB.toFixed(2)} <span class="text-xs font-normal text-gray-500">/ 5.00</span>`;
+      document.getElementById("cardScoreCPart2").innerHTML = `${finalC.toFixed(2)} <span class="text-xs font-normal text-gray-500">/ 5.00</span>`;
+
+      const sites = [
+        { name: "Site A (ทำเล A)", score: finalA },
+        { name: "Site B (ทำเล B)", score: finalB },
+        { name: "Site C (ทำเล C)", score: finalC }
+      ].sort((a,b) => b.score - a.score);
+
+      document.getElementById("bestSiteTextPart2").innerHTML = `
+        ทำเลที่ได้คะแนนสูงสุดคือ <strong class="text-emerald-400 font-bold">${sites[0].name}</strong> 
+        ด้วยคะแนนรวม <strong class="text-white font-bold">${sites[0].score.toFixed(2)} / 5.00</strong>
+      `;
+    }
+
+    function resetScoresPart2() { renderMatrixPart2(); }
+    function exportToCSVPart2() { alert("กำลังส่งออกไฟล์ CSV..."); }
+
+    // On Window Load
+    window.addEventListener('load', () => {
+      initPart1Table();
+      renderMatrixPart2();
+    });
+    window.addEventListener('resize', drawTopology);
+  </script>
+</body>
+</html>
